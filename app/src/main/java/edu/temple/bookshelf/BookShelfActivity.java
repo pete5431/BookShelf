@@ -10,25 +10,32 @@ import java.util.HashMap;
 
 public class BookShelfActivity extends AppCompatActivity {
 
-    ArrayList<HashMap> BookShelf;
-    HashMap<String, String> Books;
+    final int NUM_BOOKS = 10;
+
+    ArrayList<HashMap<String, String>> BookShelf = new ArrayList<>();
+    HashMap<String, String> BookMap = new HashMap<>();
 
     Resources res;
-    String[] book_names;
-    String[] book_authors;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_bookshelf);
 
+        makeMap();
+
+        BookShelf.add(BookMap);
+    }
+
+    void makeMap(){
+
         res = getResources();
 
-        book_names = res.getStringArray(R.array.book_names);
-        book_authors = res.getStringArray(R.array.book_authors);
+        String[] book_names = res.getStringArray(R.array.book_names);
+        String[] book_authors = res.getStringArray(R.array.book_authors);
 
-        Books = new HashMap<>();
-
-
+        for(int i = 0; i < NUM_BOOKS; i++){
+            BookMap.put(book_names[i], book_authors[i]);
+        }
     }
 }
