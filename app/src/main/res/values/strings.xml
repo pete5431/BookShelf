@@ -1,3 +1,27 @@
 <resources>
     <string name="app_name">BookShelf</string>
+    <string-array name="book_names">
+        <item>Dune</item>
+        <item>To Kill a Mockingbird</item>
+        <item>The Giver</item>
+        <item>Charlotte's Web</item>
+        <item>Holes</item>
+        <item>Origin</item>
+        <item>The Shining</item>
+        <item>The Great Alone</item>
+        <item>Murder on the Orient Express</item>
+        <item>Animal Farm</item>
+    </string-array>
+    <string-array name="book_authors">
+        <item>Frank Herbert</item>
+        <item>Harper Lee</item>
+        <item>Lois Lowry</item>
+        <item>E.B. White</item>
+        <item>Louis Sachar</item>
+        <item>Dan Brown</item>
+        <item>Stephen King</item>
+        <item>Kristin Hannah</item>
+        <item>Agatha Christie</item>
+        <item>George Orwell</item>
+    </string-array>
 </resources>
