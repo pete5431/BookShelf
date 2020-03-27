@@ -12,22 +12,25 @@ public class BookShelfActivity extends AppCompatActivity {
 
     final int NUM_BOOKS = 10;
 
-    ArrayList<HashMap<String, String>> BookShelf = new ArrayList<>();
-    HashMap<String, String> BookMap = new HashMap<>();
+    ArrayList<HashMap<String, String>> Books = new ArrayList<>();
 
     Resources res;
+
+    BookListFragment bookList;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_bookshelf);
 
-        makeMap();
+        addBooks();
 
-        BookShelf.add(BookMap);
+        bookList = BookListFragment.newInstance(Books);
+
+        getSupportFragmentManager().beginTransaction().replace(R.id.container1, bookList).commit();
     }
 
-    void makeMap(){
+    void addBooks(){
 
         res = getResources();
 
@@ -35,7 +38,10 @@ public class BookShelfActivity extends AppCompatActivity {
         String[] book_authors = res.getStringArray(R.array.book_authors);
 
         for(int i = 0; i < NUM_BOOKS; i++){
-            BookMap.put(book_names[i], book_authors[i]);
+            HashMap<String, String> newMap = new HashMap<>();
+            newMap.put(book_names[i], book_authors[i]);
+            Books.add(newMap);
         }
     }
+
 }
