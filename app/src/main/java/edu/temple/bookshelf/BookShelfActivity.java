@@ -8,7 +8,7 @@ import android.os.Bundle;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-public class BookShelfActivity extends AppCompatActivity {
+public class BookShelfActivity extends AppCompatActivity implements BookListFragment.OnBookSelectionInterface{
 
     final int NUM_BOOKS = 10;
 
@@ -18,12 +18,16 @@ public class BookShelfActivity extends AppCompatActivity {
 
     BookListFragment bookList;
 
+    BookDetailsFragment bookDetails;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_bookshelf);
 
         addBooks();
+
+        System.out.println(Books);
 
         bookList = BookListFragment.newInstance(Books);
 
@@ -44,4 +48,16 @@ public class BookShelfActivity extends AppCompatActivity {
         }
     }
 
+    @Override
+    public void bookSelect(int position){
+        HashMap<String, String> book = Books.get(position);
+
+        bookDetails = BookDetailsFragment.newInstance(book);
+
+        getSupportFragmentManager().beginTransaction().replace(R.id.container1, bookDetails)
+                .addToBackStack(null)
+                .commit();
+
+        bookDetails.displayBook(book);
+    }
 }
