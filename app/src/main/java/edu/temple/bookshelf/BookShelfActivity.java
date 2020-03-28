@@ -20,6 +20,8 @@ public class BookShelfActivity extends AppCompatActivity implements BookListFrag
 
     BookDetailsFragment bookDetails;
 
+    boolean singleContainer;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -32,6 +34,19 @@ public class BookShelfActivity extends AppCompatActivity implements BookListFrag
         bookList = BookListFragment.newInstance(Books);
 
         getSupportFragmentManager().beginTransaction().replace(R.id.container1, bookList).commit();
+
+        singleContainer = findViewById(R.id.container2) == null;
+
+        if(!singleContainer){
+            // No book selected yet, so use default constructor.
+            bookDetails = new BookDetailsFragment();
+
+            getSupportFragmentManager().beginTransaction()
+                    .replace(R.id.container2, bookDetails)
+                    .commit();
+
+        }
+
     }
 
     void addBooks(){
@@ -52,12 +67,14 @@ public class BookShelfActivity extends AppCompatActivity implements BookListFrag
     public void bookSelect(int position){
         HashMap<String, String> book = Books.get(position);
 
-        bookDetails = BookDetailsFragment.newInstance(book);
+        if(singleContainer) {
 
-        getSupportFragmentManager().beginTransaction().replace(R.id.container1, bookDetails)
-                .addToBackStack(null)
-                .commit();
+            bookDetails = BookDetailsFragment.newInstance(book);
 
-        bookDetails.displayBook(book);
+            getSupportFragmentManager().beginTransaction().replace(R.id.container1, bookDetails)
+                    .addToBackStack(null)
+                    .commit();
+        }
+        else bookDetails.displayBook(book);
     }
 }

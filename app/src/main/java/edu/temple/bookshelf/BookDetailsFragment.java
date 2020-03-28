@@ -54,8 +54,9 @@ public class BookDetailsFragment extends Fragment {
         bookName = v.findViewById(R.id.book_name);
         bookAuthor = v.findViewById(R.id.book_author);
 
-        displayBook(book);
-
+        if(book != null) {
+            displayBook(book);
+        }
         return v;
     }
 
