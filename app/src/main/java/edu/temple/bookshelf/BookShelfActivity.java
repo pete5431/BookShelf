@@ -35,8 +35,6 @@ public class BookShelfActivity extends AppCompatActivity implements BookListFrag
         // Add the books for the ArrayList Books.
         addBooks();
 
-        System.out.println(Books);
-
         // Create new instance of BookListFragment using ArrayList Books.
         bookList = BookListFragment.newInstance(Books);
 
