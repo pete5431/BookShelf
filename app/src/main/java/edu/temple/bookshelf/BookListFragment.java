@@ -21,7 +21,9 @@ public class BookListFragment extends Fragment {
     private static final String ARRAY_LIST_BOOKS = "books";
 
     // ArrayList of HashMaps that contain the values of name and author.
-    private ArrayList<HashMap<Integer, Book>> books;
+    private ArrayList<Book> books;
+
+    private BookAdapter bookAdapter;
 
     // The parent activity that implements the OnBookSelectionInterface.
     // Will receive the context of parent.
@@ -31,11 +33,10 @@ public class BookListFragment extends Fragment {
         // Required empty public constructor
     }
 
-    public static BookListFragment newInstance(ArrayList<HashMap<Integer, Book>> books) {
+    public static BookListFragment newInstance(ArrayList<Book> books) {
         BookListFragment fragment = new BookListFragment();
         Bundle args = new Bundle();
-        // ArrayList and HashMap are both Serializable.
-        args.putSerializable(ARRAY_LIST_BOOKS, books);
+        args.putParcelableArrayList(ARRAY_LIST_BOOKS, books);
         fragment.setArguments(args);
         return fragment;
     }
@@ -45,7 +46,7 @@ public class BookListFragment extends Fragment {
         super.onCreate(savedInstanceState);
         if (getArguments() != null) {
             // Though its a unchecked cast, the data structure we placed in arguments is serializable.
-            books = (ArrayList<HashMap<Integer, Book>>) getArguments().getSerializable(ARRAY_LIST_BOOKS);
+            books = getArguments().getParcelableArrayList(ARRAY_LIST_BOOKS);
         }
     }
 
@@ -56,9 +57,9 @@ public class BookListFragment extends Fragment {
         // Get reference to the listView.
         ListView bookList = v.findViewById(R.id.list_view_books);
         // Create new BookAdapter.
-        BookAdapter adapter = new BookAdapter((Context) parentActivity, books);
+        bookAdapter = new BookAdapter((Context) parentActivity, books);
 
-        bookList.setAdapter(adapter);
+        bookList.setAdapter(bookAdapter);
 
         bookList.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
@@ -86,6 +87,10 @@ public class BookListFragment extends Fragment {
     public void onDetach() {
         super.onDetach();
         parentActivity = null;
+    }
+
+    public void notifyChanged(){
+        bookAdapter.notifyDataSetChanged();
     }
 
     public interface OnBookSelectionInterface {
