@@ -1,22 +1,30 @@
 package edu.temple.bookshelf;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.fragment.app.Fragment;
 
-import android.content.res.Resources;
 import android.os.Bundle;
+import android.view.View;
+import android.widget.Button;
+import android.widget.EditText;
+
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.JsonArrayRequest;
+import com.android.volley.toolbox.Volley;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 
 public class BookShelfActivity extends AppCompatActivity implements BookListFragment.OnBookSelectionInterface{
 
-    // The number of books to be added.
-    final int NUM_BOOKS = 10;
-
-    // The ArrayList that contains HashMap objects.
-    // The HashMap objects contain an Integer object as the key and Book object as the value.
-    // The Book Object will contain the name and author of the book.
-    ArrayList<HashMap<Integer, Book>> Books = new ArrayList<>();
+    // ArrayList containing Book objects.
+    ArrayList<Book> Books = new ArrayList<>();
 
     // Fragment that shows a ListView of the books.
     BookListFragment bookList;
@@ -27,77 +35,169 @@ public class BookShelfActivity extends AppCompatActivity implements BookListFrag
     // Determines if one container or two containers is being shown.
     boolean singleContainer;
 
+    RequestQueue requestQueue;
+
+    EditText search_bar;
+
+    Button search_button;
+
+    // The selected index of the current book in the ArrayList.
+    int selected_index = -1;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_bookshelf);
 
-        // Add the books for the ArrayList Books.
-        addBooks();
-
-        // Create new instance of BookListFragment using ArrayList Books.
-        bookList = BookListFragment.newInstance(Books);
-
-        // Do the transaction and commit to container 1.
-        getSupportFragmentManager().beginTransaction().replace(R.id.container1, bookList).commit();
-
         // Determine if the second container is present.
         singleContainer = findViewById(R.id.container2) == null;
 
-        // If the second container is present.
-        if(!singleContainer){
-            // No book selected yet, so use default constructor.
-            bookDetails = new BookDetailsFragment();
+        // Request a new queue using Volley.
+        requestQueue = Volley.newRequestQueue(this);
 
-            // Do the transaction.
-            getSupportFragmentManager().beginTransaction()
-                    .replace(R.id.container2, bookDetails)
-                    .commit();
-
+        // If there is something saved.
+        if(savedInstanceState != null) {
+            // Get the saved Books ArrayList.
+            Books = savedInstanceState.getParcelableArrayList("BookArray");
+            // Get the selected_index.
+            selected_index = savedInstanceState.getInt("SelectedIndex");
         }
+
+        // Create new instance of BookListFragment using ArrayList Books.
+        bookList = BookListFragment.newInstance(Books);
+        // Do the transaction and commit to container 1.
+        getSupportFragmentManager().beginTransaction().replace(R.id.container1, bookList).commit();
+
+        // If two containers are shown.
+        if(!singleContainer){
+
+            // While the selected_index is a valid index, and Books is not empty.
+            if(selected_index >= 0 && !Books.isEmpty()){
+                // Start new Instance of bookDetails using the Book object at the selected_index in the
+                // current Books ArrayList.
+                bookDetails = BookDetailsFragment.newInstance(Books.get(selected_index));
+                getSupportFragmentManager().beginTransaction()
+                        .replace(R.id.container2, bookDetails)
+                        .commit();
+            }
+            else {
+                // Start a default bookDetails fragment.
+                bookDetails = new BookDetailsFragment();
+                // Do the transaction.
+                getSupportFragmentManager().beginTransaction()
+                        .replace(R.id.container2, bookDetails)
+                        .commit();
+            }
+        }
+        else{
+            // If something was saved and index and Books is valid.
+            if(savedInstanceState != null && selected_index >= 0 && !Books.isEmpty()){
+                // Retain the bookDetails fragment by replacing the list in container1.
+                bookDetails = BookDetailsFragment.newInstance(Books.get(selected_index));
+                getSupportFragmentManager().beginTransaction()
+                        .replace(R.id.container1, bookDetails)
+                        .addToBackStack(null)
+                        .commit();
+            }
+        }
+
+        search_bar = findViewById(R.id.search_bar);
+        search_button = findViewById(R.id.search_button);
+
+        search_button.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+
+                // The url for the Book API. The end of the url will be what the user enters.
+                String search_url = "https://kamorris.com/lab/abp/booksearch.php?search=" + search_bar.getText().toString();
+
+                JsonArrayRequest jsonArrayRequest = new JsonArrayRequest(Request.Method.GET, search_url, null,
+                        new Response.Listener<JSONArray>() {
+                            @Override
+                            public void onResponse(JSONArray response) {
+
+                                int i = 0;
+                                for(; i < response.length(); i++){
+                                    try{
+                                        JSONObject jsonObject = response.getJSONObject(i);
+                                        int bookId = jsonObject.getInt("book_id");
+                                        if(Books.size() >= response.length()){
+                                            if(Books.get(i).getBookId() == bookId){
+                                                continue;
+                                            }else{
+                                                Books.remove(i);
+                                            }
+                                        }
+                                        else if(i < Books.size() - 1 && Books.size() < response.length()){
+                                            if(Books.get(i).getBookId() == bookId){
+                                                continue;
+                                            }else{
+                                                Books.remove(i);
+                                            }
+                                        }
+                                        String bookTitle = jsonObject.getString("title");
+                                        String bookAuthor = jsonObject.getString("author");
+                                        String coverURL = jsonObject.getString("cover_url");
+                                        Book book = new Book(bookId, bookTitle, bookAuthor, coverURL);
+                                        Books.add(i, book);
+                                    }
+                                    catch (JSONException e) {
+                                        e.printStackTrace();
+                                    }
+                                }
+
+                                // Remove any excess books.
+                                if(Books.size() > response.length()){
+                                    int start = i;
+                                    int size = Books.size();
+                                    for(; i < size; i++){
+                                        Books.remove(start);
+                                    }
+                                }
+                                Books.trimToSize();
+                                bookList.notifyChanged();
+                                if(singleContainer) {
+                                    Fragment frag = getSupportFragmentManager().findFragmentById(R.id.container1);
+                                    if (frag instanceof BookDetailsFragment) {
+                                        getSupportFragmentManager().beginTransaction().replace(R.id.container1, bookList).commit();
+                                    }
+                                }
+                            }
+                        },
+                        new Response.ErrorListener() {
+                            @Override
+                            public void onErrorResponse(VolleyError error){
+
+                            }
+                        });
+                requestQueue.add(jsonArrayRequest);
+            }
+        });
 
     }
 
-    // Adds the books to ArrayList Books.
-    void addBooks(){
-
-        // Get reference to resources.
-        Resources res = getResources();
-
-        // Fetch the arrays for names and authors from resources.
-        String[] book_names = res.getStringArray(R.array.book_names);
-        String[] book_authors = res.getStringArray(R.array.book_authors);
-
-        // Loop through the number of books to be added.
-        for(int i = 0; i < NUM_BOOKS; i++){
-            // Create a new Book Object with the name and author.
-            Book newBook = new Book(book_names[i], book_authors[i]);
-            // Create a new HashMap.
-            HashMap<Integer, Book> newMap = new HashMap<>();
-            // Add the key value pair, using the index as the key and the Book as the value.
-            newMap.put(i, newBook);
-            // Add the HashMap object to ArrayList Books.
-            Books.add(newMap);
-        }
+    @Override
+    public void onSaveInstanceState(Bundle savedInstanceState){
+        super.onSaveInstanceState(savedInstanceState);
+        savedInstanceState.putParcelableArrayList("BookArray", Books);
+        savedInstanceState.putInt("SelectedIndex", selected_index);
     }
 
     @Override
     public void bookSelect(int index){
-        // Get the book from the ArrayList using the passed index.
-        HashMap<Integer, Book> book = Books.get(index);
+
+        // Set selected_index to passed index.
+        selected_index = index;
 
         // If only container 1 is shown.
         if(singleContainer) {
 
-            // Create new instance of BookDetailsFragment using the book and index.
-            bookDetails = BookDetailsFragment.newInstance(book, index);
-
             // Perform the Transaction. Add to backStack.
-            getSupportFragmentManager().beginTransaction().replace(R.id.container1, bookDetails)
+            getSupportFragmentManager().beginTransaction().replace(R.id.container1, BookDetailsFragment.newInstance(Books.get(index)))
                     .addToBackStack(null)
                     .commit();
-        }
+        }else bookDetails.displayBook(Books.get(index));
         // If two containers, simply update the current BookDetailsFragment.
-        else bookDetails.displayBook(book, index);
+
     }
 }
