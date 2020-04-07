@@ -55,4 +55,18 @@ public class Book implements Parcelable {
             return new Book[size];
         }
     };
+
+    String getTitle(){
+        return this.title;
+    }
+
+    String getAuthor(){
+        return this.author;
+    }
+
+    String getCoverURL(){
+        return this.coverURL;
+    }
+
+    int getBookId() { return this.bookId; }
 }
