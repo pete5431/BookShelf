@@ -7,35 +7,32 @@ import androidx.fragment.app.Fragment;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.TextView;
 
-import java.util.HashMap;
+import com.squareup.picasso.Picasso;
 
 public class BookDetailsFragment extends Fragment {
 
     // the fragment initialization parameters, the HashMap and the Integer key.
-    private static final String HASH_MAP_BOOK = "book_map";
-    private static final String BOOK_ID = "book_id";
+    private static final String BOOK_OBJECT = "book_obj";
 
     // Contains the name and author of the book.
-    private HashMap<Integer, Book> book;
-    // The key to get the name and author from the HashMap.
-    private int bookId;
+    private Book book;
 
     // The two textViews for displaying name and author.
     private TextView bookName;
     private TextView bookAuthor;
+    private ImageView bookCover;
 
     public BookDetailsFragment() {
         // Required empty public constructor
     }
 
-    public static BookDetailsFragment newInstance(HashMap<Integer, Book> book, int id) {
+    public static BookDetailsFragment newInstance(Book book) {
         BookDetailsFragment fragment = new BookDetailsFragment();
         Bundle args = new Bundle();
-        // HashMap is Serializable.
-        args.putSerializable(HASH_MAP_BOOK, book);
-        args.putInt(BOOK_ID, id);
+        args.putParcelable(BOOK_OBJECT, book);
         fragment.setArguments(args);
         return fragment;
     }
@@ -44,9 +41,7 @@ public class BookDetailsFragment extends Fragment {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         if (getArguments() != null) {
-            // Even though unchecked cast, HashMap is serializable.
-            book = (HashMap<Integer, Book>) getArguments().getSerializable(HASH_MAP_BOOK);
-            bookId = getArguments().getInt(BOOK_ID);
+            book = getArguments().getParcelable(BOOK_OBJECT);
         }
     }
 
@@ -59,31 +54,25 @@ public class BookDetailsFragment extends Fragment {
         // Get reference to both textViews.
         bookName = v.findViewById(R.id.book_name);
         bookAuthor = v.findViewById(R.id.book_author);
+        bookCover = v.findViewById(R.id.book_cover);
 
         // As long as the passed HashMap isn't null.
         if(book != null){
             // Call the method displayBook.
-            displayBook(book, bookId);
+            displayBook(book);
         }
 
         return v;
     }
 
     // Displays the book details in the textViews.
-    public void displayBook(HashMap<Integer, Book> bookMap, int position){
+    public void displayBook(Book book){
 
-        // Get the Book Object from the HashMap.
-        Book book = bookMap.get(position);
-
-        // As long as Book Object isn't null.
         if(book != null) {
-            // Get the title or book name using the getter method of Book Class.
-            String title = book.getName();
-            // Get the author name using the getter method of Book Class.
-            String author = book.getAuthor();
-            // Set the text of the two textViews accordingly.
-            bookName.setText(title);
-            bookAuthor.setText(author);
+            bookAuthor.setText(book.getAuthor());
+            bookName.setText(book.getTitle());
+            Picasso.get().load(book.getCoverURL()).into(bookCover);
         }
+
     }
 }
