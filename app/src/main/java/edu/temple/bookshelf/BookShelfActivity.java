@@ -41,8 +41,8 @@ public class BookShelfActivity extends AppCompatActivity implements BookListFrag
 
     Button search_button;
 
-    // The selected index of the current book in the ArrayList.
-    int selected_index = -1;
+    // The current selected Book.
+    Book selectedBook;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -59,28 +59,22 @@ public class BookShelfActivity extends AppCompatActivity implements BookListFrag
         if(savedInstanceState != null) {
             // Get the saved Books ArrayList.
             Books = savedInstanceState.getParcelableArrayList("BookArray");
-            // Get the selected_index.
-            selected_index = savedInstanceState.getInt("SelectedIndex");
-        }
+            // Get the selected book.
+            selectedBook = savedInstanceState.getParcelable("SelectedBook");
 
-        // Create new instance of BookListFragment using ArrayList Books.
-        bookList = BookListFragment.newInstance(Books);
-        // Do the transaction and commit to container 1.
-        getSupportFragmentManager().beginTransaction().replace(R.id.container1, bookList).commit();
-
-        // If two containers are shown.
-        if(!singleContainer){
-
-            // While the selected_index is a valid index, and Books is not empty.
-            if(selected_index >= 0 && !Books.isEmpty()){
-                // Start new Instance of bookDetails using the Book object at the selected_index in the
-                // current Books ArrayList.
-                bookDetails = BookDetailsFragment.newInstance(Books.get(selected_index));
+            // If two containers are shown.
+            if(!singleContainer){
+                // Update the bookDetails fragment with the saved selectedBook.
+                bookDetails = BookDetailsFragment.newInstance(selectedBook);
                 getSupportFragmentManager().beginTransaction()
                         .replace(R.id.container2, bookDetails)
                         .commit();
             }
-            else {
+        }
+        else{
+            // If two containers are shown.
+            if(!singleContainer){
+
                 // Start a default bookDetails fragment.
                 bookDetails = new BookDetailsFragment();
                 // Do the transaction.
@@ -89,16 +83,19 @@ public class BookShelfActivity extends AppCompatActivity implements BookListFrag
                         .commit();
             }
         }
-        else{
-            // If something was saved and index and Books is valid.
-            if(savedInstanceState != null && selected_index >= 0 && !Books.isEmpty()){
-                // Retain the bookDetails fragment by replacing the list in container1.
-                bookDetails = BookDetailsFragment.newInstance(Books.get(selected_index));
-                getSupportFragmentManager().beginTransaction()
-                        .replace(R.id.container1, bookDetails)
-                        .addToBackStack(null)
-                        .commit();
-            }
+
+        // Create new instance of BookListFragment using ArrayList Books.
+        bookList = BookListFragment.newInstance(Books);
+        // Do the transaction and commit to container 1.
+        getSupportFragmentManager().beginTransaction().replace(R.id.container1, bookList).commit();
+
+        if(savedInstanceState != null && singleContainer && selectedBook != null){
+            // Retain the bookDetails fragment by replacing the list in container1.
+            bookDetails = BookDetailsFragment.newInstance(selectedBook);
+            getSupportFragmentManager().beginTransaction()
+                    .replace(R.id.container1, bookDetails)
+                    .addToBackStack(null)
+                    .commit();
         }
 
         search_bar = findViewById(R.id.search_bar);
@@ -180,14 +177,14 @@ public class BookShelfActivity extends AppCompatActivity implements BookListFrag
     public void onSaveInstanceState(Bundle savedInstanceState){
         super.onSaveInstanceState(savedInstanceState);
         savedInstanceState.putParcelableArrayList("BookArray", Books);
-        savedInstanceState.putInt("SelectedIndex", selected_index);
+        savedInstanceState.putParcelable("SelectedBook", selectedBook);
     }
 
     @Override
     public void bookSelect(int index){
 
-        // Set selected_index to passed index.
-        selected_index = index;
+        // Save the selectedBook in the current Book ArrayList.
+        selectedBook = Books.get(index);
 
         // If only container 1 is shown.
         if(singleContainer) {
@@ -198,6 +195,5 @@ public class BookShelfActivity extends AppCompatActivity implements BookListFrag
                     .commit();
         }else bookDetails.displayBook(Books.get(index));
         // If two containers, simply update the current BookDetailsFragment.
-
     }
 }
