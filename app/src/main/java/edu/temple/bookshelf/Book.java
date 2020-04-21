@@ -15,10 +15,13 @@ public class Book implements Parcelable {
     private String author;
     // The url for the book cover image.
     private String coverURL;
+    // The length of the book in seconds.
+    private int bookLength;
 
     // Accepts a name and author as constructors.
-    public Book(int id, String name, String author, String url){
+    public Book(int id, int duration, String name, String author, String url){
         this.bookId = id;
+        this.bookLength = duration;
         this.title = name;
         this.author = author;
         this.coverURL = url;
@@ -26,6 +29,7 @@ public class Book implements Parcelable {
 
     protected Book(Parcel in) {
         bookId = in.readInt();
+        bookLength = in.readInt();
         title = in.readString();
         author = in.readString();
         coverURL = in.readString();
@@ -34,6 +38,7 @@ public class Book implements Parcelable {
     @Override
     public void writeToParcel(Parcel dest, int flags) {
         dest.writeInt(bookId);
+        dest.writeInt(bookLength);
         dest.writeString(title);
         dest.writeString(author);
         dest.writeString(coverURL);
@@ -69,4 +74,6 @@ public class Book implements Parcelable {
     }
 
     int getBookId() { return this.bookId; }
+
+    int getBookLength() { return this.bookLength; }
 }
