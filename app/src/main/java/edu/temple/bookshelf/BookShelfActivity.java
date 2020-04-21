@@ -1,12 +1,20 @@
 package edu.temple.bookshelf;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
 
+import android.content.ComponentName;
+import android.content.Intent;
+import android.content.ServiceConnection;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.IBinder;
+import android.os.Message;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.SeekBar;
 
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
@@ -20,6 +28,8 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+
+import edu.temple.audiobookplayer.AudiobookService;
 
 public class BookShelfActivity extends AppCompatActivity implements BookListFragment.OnBookSelectionInterface{
 
@@ -44,10 +54,39 @@ public class BookShelfActivity extends AppCompatActivity implements BookListFrag
     // The current selected Book.
     Book selectedBook;
 
+    SeekBar seekBar;
+
+    // Intent for BookAudioService.
+    Intent serviceIntent;
+    boolean connected;
+    AudiobookService.MediaControlBinder mediaControlBinder;
+    AudiobookService.BookProgress bookProgress;
+
+    ServiceConnection serviceConnection = new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName name, IBinder service) {
+            connected = true;
+            mediaControlBinder = (AudiobookService.MediaControlBinder) service;
+            mediaControlBinder.setProgressHandler(bookHandler);
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName name) {
+            connected = false;
+            mediaControlBinder = null;
+        }
+    };
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_bookshelf);
+
+        serviceIntent = new Intent(BookShelfActivity.this, AudiobookService.class);
+
+        bindService(serviceIntent, serviceConnection, BIND_AUTO_CREATE);
+
+        seekBar = findViewById(R.id.bookProgressBar);
 
         // Determine if the second container is present.
         singleContainer = findViewById(R.id.container2) == null;
@@ -135,7 +174,8 @@ public class BookShelfActivity extends AppCompatActivity implements BookListFrag
                                         String bookTitle = jsonObject.getString("title");
                                         String bookAuthor = jsonObject.getString("author");
                                         String coverURL = jsonObject.getString("cover_url");
-                                        Book book = new Book(bookId, bookTitle, bookAuthor, coverURL);
+                                        int bookLength = jsonObject.getInt("duration");
+                                        Book book = new Book(bookId, bookLength, bookTitle, bookAuthor, coverURL);
                                         Books.add(i, book);
                                     }
                                     catch (JSONException e) {
@@ -193,7 +233,20 @@ public class BookShelfActivity extends AppCompatActivity implements BookListFrag
             getSupportFragmentManager().beginTransaction().replace(R.id.container1, BookDetailsFragment.newInstance(Books.get(index)))
                     .addToBackStack(null)
                     .commit();
+
+            mediaControlBinder.play(selectedBook.getBookId());
+
         }else bookDetails.displayBook(Books.get(index));
         // If two containers, simply update the current BookDetailsFragment.
     }
+
+    Handler bookHandler = new Handler(new Handler.Callback() {
+        @Override
+        public boolean handleMessage(@NonNull Message msg) {
+
+            bookProgress = (AudiobookService.BookProgress) msg.obj;
+
+            return false;
+        }
+    });
 }
