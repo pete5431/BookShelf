@@ -14,7 +14,9 @@ import android.os.Message;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.SeekBar;
+import android.widget.TextView;
 
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
@@ -31,14 +33,12 @@ import java.util.ArrayList;
 
 import edu.temple.audiobookplayer.AudiobookService;
 
-public class BookShelfActivity extends AppCompatActivity implements BookListFragment.OnBookSelectionInterface{
+public class BookShelfActivity extends AppCompatActivity implements BookListFragment.OnBookSelectionInterface, BookDetailsFragment.OnPlayBookInterface{
 
     // ArrayList containing Book objects.
     ArrayList<Book> Books = new ArrayList<>();
-
     // Fragment that shows a ListView of the books.
     BookListFragment bookList;
-
     // Fragment that shows the details of the selected book.
     BookDetailsFragment bookDetails;
 
@@ -46,15 +46,17 @@ public class BookShelfActivity extends AppCompatActivity implements BookListFrag
     boolean singleContainer;
 
     RequestQueue requestQueue;
-
-    EditText search_bar;
-
-    Button search_button;
+    EditText searchBar;
+    TextView bookStatus;
+    Button searchButton;
+    ImageButton pauseButton;
+    ImageButton stopButton;
+    SeekBar progressBar;
 
     // The current selected Book.
     Book selectedBook;
-
-    SeekBar seekBar;
+    // The current played book.
+    Book currentPlayingBook;
 
     // Intent for BookAudioService.
     Intent serviceIntent;
@@ -67,7 +69,7 @@ public class BookShelfActivity extends AppCompatActivity implements BookListFrag
         public void onServiceConnected(ComponentName name, IBinder service) {
             connected = true;
             mediaControlBinder = (AudiobookService.MediaControlBinder) service;
-            mediaControlBinder.setProgressHandler(bookHandler);
+            mediaControlBinder.setProgressHandler(bookProgressHandler);
         }
 
         @Override
@@ -83,10 +85,38 @@ public class BookShelfActivity extends AppCompatActivity implements BookListFrag
         setContentView(R.layout.activity_bookshelf);
 
         serviceIntent = new Intent(BookShelfActivity.this, AudiobookService.class);
-
         bindService(serviceIntent, serviceConnection, BIND_AUTO_CREATE);
 
-        seekBar = findViewById(R.id.bookProgressBar);
+        progressBar = findViewById(R.id.book_progress_bar);
+        pauseButton = findViewById(R.id.pause_button);
+        stopButton = findViewById(R.id.stop_button);
+        searchBar = findViewById(R.id.search_bar);
+        searchButton = findViewById(R.id.search_button);
+        bookStatus = findViewById(R.id.book_status);
+
+        pauseButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if(connected){
+                    mediaControlBinder.pause();
+                }
+            }
+        });
+
+        stopButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if(connected && mediaControlBinder.isPlaying()){
+                    mediaControlBinder.stop();
+                    stopService(serviceIntent);
+                    progressBar.setProgress(0);
+                    progressBar.setMin(0);
+                    progressBar.setMax(0);
+                    currentPlayingBook = null;
+                    bookStatus.setText("");
+                }
+            }
+        });
 
         // Determine if the second container is present.
         singleContainer = findViewById(R.id.container2) == null;
@@ -100,6 +130,15 @@ public class BookShelfActivity extends AppCompatActivity implements BookListFrag
             Books = savedInstanceState.getParcelableArrayList("BookArray");
             // Get the selected book.
             selectedBook = savedInstanceState.getParcelable("SelectedBook");
+            // Get the book that is being played.
+            currentPlayingBook = savedInstanceState.getParcelable("CurrentPlayingBook");
+
+            if(currentPlayingBook != null) {
+                progressBar.setMin(0);
+                progressBar.setMax(currentPlayingBook.getBookLength());
+                String status = "Now Playing: " + currentPlayingBook.getTitle() + " by " + currentPlayingBook.getAuthor();
+                bookStatus.setText(status);
+            }
 
             // If two containers are shown.
             if(!singleContainer){
@@ -137,15 +176,12 @@ public class BookShelfActivity extends AppCompatActivity implements BookListFrag
                     .commit();
         }
 
-        search_bar = findViewById(R.id.search_bar);
-        search_button = findViewById(R.id.search_button);
-
-        search_button.setOnClickListener(new View.OnClickListener() {
+        searchButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
 
                 // The url for the Book API. The end of the url will be what the user enters.
-                String search_url = "https://kamorris.com/lab/abp/booksearch.php?search=" + search_bar.getText().toString();
+                String search_url = "https://kamorris.com/lab/abp/booksearch.php?search=" + searchBar.getText().toString();
 
                 JsonArrayRequest jsonArrayRequest = new JsonArrayRequest(Request.Method.GET, search_url, null,
                         new Response.Listener<JSONArray>() {
@@ -218,6 +254,7 @@ public class BookShelfActivity extends AppCompatActivity implements BookListFrag
         super.onSaveInstanceState(savedInstanceState);
         savedInstanceState.putParcelableArrayList("BookArray", Books);
         savedInstanceState.putParcelable("SelectedBook", selectedBook);
+        savedInstanceState.putParcelable("CurrentPlayingBook", currentPlayingBook);
     }
 
     @Override
@@ -234,17 +271,67 @@ public class BookShelfActivity extends AppCompatActivity implements BookListFrag
                     .addToBackStack(null)
                     .commit();
 
-            mediaControlBinder.play(selectedBook.getBookId());
-
-        }else bookDetails.displayBook(Books.get(index));
-        // If two containers, simply update the current BookDetailsFragment.
+        }else {
+            // If two containers, simply update the current BookDetailsFragment.
+            bookDetails.displayBook(Books.get(index));
+        }
     }
 
-    Handler bookHandler = new Handler(new Handler.Callback() {
+    @Override
+    public void playBook(Book book){
+        mediaControlBinder.play(book.getBookId());
+        progressBar.setMin(0);
+        progressBar.setMax(book.getBookLength());
+        currentPlayingBook = book;
+        startService(serviceIntent);
+        String status = "Now Playing: " + book.getTitle() + " by " + book.getAuthor();
+        bookStatus.setText(status);
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        unbindService(serviceConnection);
+    }
+
+    Handler bookProgressHandler = new Handler(new Handler.Callback() {
         @Override
         public boolean handleMessage(@NonNull Message msg) {
 
             bookProgress = (AudiobookService.BookProgress) msg.obj;
+
+            if(bookProgress != null) {
+                if (bookProgress.getProgress() < currentPlayingBook.getBookLength()) {
+                    progressBar.setProgress(bookProgress.getProgress());
+                }
+                if (bookProgress.getProgress() == currentPlayingBook.getBookLength()) {
+                    mediaControlBinder.stop();
+                    progressBar.setProgress(0);
+                    progressBar.setMin(0);
+                    progressBar.setMax(0);
+                    currentPlayingBook = null;
+                    bookStatus.setText("");
+                }
+            }
+
+            progressBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+                @Override
+                public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                    if(fromUser){
+                        mediaControlBinder.seekTo(progress);
+                    }
+                }
+
+                @Override
+                public void onStartTrackingTouch(SeekBar seekBar) {
+
+                }
+
+                @Override
+                public void onStopTrackingTouch(SeekBar seekBar) {
+
+                }
+            });
 
             return false;
         }

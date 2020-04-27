@@ -79,7 +79,7 @@ public class BookListFragment extends Fragment {
             parentActivity = (OnBookSelectionInterface) context;
         } else {
             throw new RuntimeException(context.toString()
-                    + " must implement OnBookSelectionListener");
+                    + " must implement OnBookSelectionInterface");
         }
     }
 
