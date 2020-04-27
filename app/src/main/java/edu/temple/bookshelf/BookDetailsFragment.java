@@ -1,5 +1,6 @@
 package edu.temple.bookshelf;
 
+import android.content.Context;
 import android.os.Bundle;
 
 import androidx.fragment.app.Fragment;
@@ -7,6 +8,7 @@ import androidx.fragment.app.Fragment;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -24,6 +26,9 @@ public class BookDetailsFragment extends Fragment {
     private TextView bookName;
     private TextView bookAuthor;
     private ImageView bookCover;
+    private ImageButton playButton;
+
+    private OnPlayBookInterface parentActivity;
 
     public BookDetailsFragment() {
         // Required empty public constructor
@@ -48,6 +53,8 @@ public class BookDetailsFragment extends Fragment {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
+        System.out.println("BookDetails OnCreate Called.\n");
+
         // Inflate the layout for this fragment
         View v = inflater.inflate(R.layout.fragment_book_details, container, false);
 
@@ -55,6 +62,16 @@ public class BookDetailsFragment extends Fragment {
         bookName = v.findViewById(R.id.book_name);
         bookAuthor = v.findViewById(R.id.book_author);
         bookCover = v.findViewById(R.id.book_cover);
+        playButton = v.findViewById(R.id.play_button);
+
+        playButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if(book != null) {
+                    parentActivity.playBook(book);
+                }
+            }
+        });
 
         // As long as the passed HashMap isn't null.
         if(book != null){
@@ -64,15 +81,37 @@ public class BookDetailsFragment extends Fragment {
 
         return v;
     }
+    @Override
+    public void onAttach(Context context) {
+        super.onAttach(context);
+        if (context instanceof OnPlayBookInterface) {
+            parentActivity = (OnPlayBookInterface) context;
+        } else {
+            throw new RuntimeException(context.toString()
+                    + " must implement OnPlayBookInterface");
+        }
+    }
+
+    @Override
+    public void onDetach() {
+        super.onDetach();
+        parentActivity = null;
+    }
+
+    public interface OnPlayBookInterface {
+        void playBook(Book book);
+    }
 
     // Displays the book details in the textViews.
     public void displayBook(Book book){
 
         if(book != null) {
+            this.book = book;
             bookAuthor.setText(book.getAuthor());
             bookName.setText(book.getTitle());
             Picasso.get().load(book.getCoverURL()).into(bookCover);
         }
-
     }
+
+
 }
