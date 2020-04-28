@@ -48,6 +48,7 @@ public class BookShelfActivity extends AppCompatActivity implements BookListFrag
     RequestQueue requestQueue;
     EditText searchBar;
     TextView bookStatus;
+    TextView bookPercent;
     Button searchButton;
     ImageButton pauseButton;
     ImageButton stopButton;
@@ -93,6 +94,7 @@ public class BookShelfActivity extends AppCompatActivity implements BookListFrag
         searchBar = findViewById(R.id.search_bar);
         searchButton = findViewById(R.id.search_button);
         bookStatus = findViewById(R.id.book_status);
+        bookPercent = findViewById(R.id.book_percent);
 
         pauseButton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -106,14 +108,14 @@ public class BookShelfActivity extends AppCompatActivity implements BookListFrag
         stopButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if(connected && mediaControlBinder.isPlaying()){
+                if(connected){
                     mediaControlBinder.stop();
                     stopService(serviceIntent);
-                    progressBar.setProgress(0);
                     progressBar.setMin(0);
                     progressBar.setMax(0);
                     currentPlayingBook = null;
                     bookStatus.setText("");
+                    bookPercent.setText("");
                 }
             }
         });
@@ -279,11 +281,16 @@ public class BookShelfActivity extends AppCompatActivity implements BookListFrag
 
     @Override
     public void playBook(Book book){
+        // Start the service so that service doesn't stop on restart.
+        startService(serviceIntent);
+        // Play the book using the binder object.
         mediaControlBinder.play(book.getBookId());
+        // Set the progress bar min and max.
         progressBar.setMin(0);
         progressBar.setMax(book.getBookLength());
+        // Save the current playing book.
         currentPlayingBook = book;
-        startService(serviceIntent);
+        // Change the status.
         String status = "Now Playing: " + book.getTitle() + " by " + book.getAuthor();
         bookStatus.setText(status);
     }
@@ -303,14 +310,16 @@ public class BookShelfActivity extends AppCompatActivity implements BookListFrag
             if(bookProgress != null) {
                 if (bookProgress.getProgress() < currentPlayingBook.getBookLength()) {
                     progressBar.setProgress(bookProgress.getProgress());
+                    String percent = (int)(((double)progressBar.getProgress() / (double)progressBar.getMax()) * 100) + "/100%";
+                    bookPercent.setText(percent);
                 }
                 if (bookProgress.getProgress() == currentPlayingBook.getBookLength()) {
                     mediaControlBinder.stop();
-                    progressBar.setProgress(0);
                     progressBar.setMin(0);
                     progressBar.setMax(0);
                     currentPlayingBook = null;
                     bookStatus.setText("");
+                    bookPercent.setText("");
                 }
             }
 
@@ -319,6 +328,8 @@ public class BookShelfActivity extends AppCompatActivity implements BookListFrag
                 public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
                     if(fromUser){
                         mediaControlBinder.seekTo(progress);
+                        String percent = (int)(((double)progressBar.getProgress() / (double)progressBar.getMax()) * 100) + "/100%";
+                        bookPercent.setText(percent);
                     }
                 }
 
